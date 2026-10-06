@@ -7,7 +7,6 @@ from launch.substitutions import Command
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
-
 def generate_launch_description():
     pkg = get_package_share_directory('robot_description')
     xacro_file = os.path.join(pkg, 'urdf', 'robot.urdf.xacro')
@@ -15,6 +14,7 @@ def generate_launch_description():
 
     robot_description = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
 
+    # 1. Запуск Gazebo Harmonic (GUI включен, автостарт -r)
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'),
@@ -22,14 +22,15 @@ def generate_launch_description():
         launch_arguments={'gz_args': f'-r {world_file}'}.items(),
     )
 
+    # 2. Публикация состояний робота
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='screen',
-        parameters=[{'robot_description': robot_description,
-                     'use_sim_time': True}],
+        parameters=[{'robot_description': robot_description, 'use_sim_time': True}],
     )
 
+    # 3. Спавн робота в стартовую позицию
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
@@ -39,6 +40,7 @@ def generate_launch_description():
                    '-x', '0.0', '-y', '0.0', '-z', '0.01'],
     )
 
+    # 4. Двунаправленный мост
     bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
